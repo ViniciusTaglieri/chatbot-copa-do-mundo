@@ -1,60 +1,71 @@
-interface QuizQuestion {
+import { groq } from "@ai-sdk/groq"
+import { generateText } from "ai"
+
+const QUIZ_GENERATION_PROMPT = `Gere uma pergunta de quiz sobre Copa do Mundo de futebol em português brasileiro.
+Retorne APENAS um JSON no formato:
+{"question": "<pergunta>", "options": ["<opção1>", "<opção2>", "<opção3>", "<opção4>"], "correctAnswer": <índice da resposta correta (0-3)>, "explanation": "<explicação>"}
+
+Regras:
+- A pergunta deve ser sobre Copa do Mundo (jogadores, seleções, finais, recordes, etc)
+- Opções devem ser plausíveis (não óbvias)
+- O explanation deve ser educativo e curto
+- Retorne APENAS o JSON, sem texto adicional`
+
+let currentQuestionIndex = -1
+let sessionQuestions: Array<{
   question: string
   options: string[]
   correctAnswer: number
   explanation: string
-}
+}> = []
 
-const QUIZ_QUESTIONS: QuizQuestion[] = [
-  {
-    question: "Qual país tem mais títulos de Copa do Mundo?",
-    options: ["Alemanha", "Brasil", "Itália", "Argentina"],
-    correctAnswer: 1,
-    explanation: "O Brasil é o maior campeão com 5 títulos (1958, 1962, 1970, 1994, 2002).",
-  },
-  {
-    question: "Em que ano o Brasil sediou a Copa do Mundo pela última vez?",
-    options: ["1950", "2014", "1978", "2006"],
-    correctAnswer: 1,
-    explanation: "O Brasil sediou a Copa em 2014, quando a Alemanha foi campeã.",
-  },
-  {
-    question: "Qual jogador tem mais gols em Copas do Mundo?",
-    options: ["Ronaldo Fenômeno", "Pelé", "Miroslav Klose", "Just Fontaine"],
-    correctAnswer: 2,
-    explanation: "Miroslav Klose tem 16 gols em Copas, seguido por Ronaldo com 15.",
-  },
-  {
-    question: "Quantas Copas do Mundo já foram realizadas até 2022?",
-    options: ["20", "22", "18", "25"],
-    correctAnswer: 1,
-    explanation: "A Copa de 2022 no Catar foi a 22ª edição do torneio.",
-  },
-  {
-    question: "Qual seleção foi campeã da Copa de 1998?",
-    options: ["Brasil", "França", "Itália", "Argentina"],
-    correctAnswer: 1,
-    explanation: "A França venceu o Brasil por 3 a 0 na final de 1998, em Paris.",
-  },
-]
+async function generateQuizQuestion(): Promise<{
+  question: string
+  options: string[]
+  correctAnswer: number
+  explanation: string
+} | null> {
+  try {
+    const { text: raw } = await generateText({
+      model: groq("llama-3.3-70b-versatile"),
+      prompt: QUIZ_GENERATION_PROMPT,
+      temperature: 0.9,
+      maxOutputTokens: 300,
+    })
 
-let currentQuestionIndex = -1
-let sessionQuestions: QuizQuestion[] = []
-
-export function startQuiz(): { question: string; options: string[] } {
-  sessionQuestions = [...QUIZ_QUESTIONS].sort(() => Math.random() - 0.5)
-  currentQuestionIndex = 0
-
-  const q = sessionQuestions[0]
-  return {
-    question: q.question,
-    options: q.options,
+    const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
+    return JSON.parse(cleaned)
+  } catch {
+    return null
   }
 }
 
-export function answerQuiz(
+export async function startQuiz(): Promise<{ question: string; options: string[] }> {
+  const firstQuestion = await generateQuizQuestion()
+  if (!firstQuestion) {
+    return {
+      question: "Qual país tem mais títulos de Copa do Mundo?",
+      options: ["Alemanha", "Brasil", "Itália", "Argentina"],
+    }
+  }
+
+  sessionQuestions = [firstQuestion]
+  currentQuestionIndex = 0
+
+  return {
+    question: firstQuestion.question,
+    options: firstQuestion.options,
+  }
+}
+
+export async function answerQuiz(
   userAnswer: string
-): { correct: boolean; explanation: string; finished: boolean; nextQuestion?: { question: string; options: string[] } } {
+): Promise<{
+  correct: boolean
+  explanation: string
+  finished: boolean
+  nextQuestion?: { question: string; options: string[] }
+}> {
   const currentQuestion = sessionQuestions[currentQuestionIndex]
   if (!currentQuestion) {
     return { correct: false, explanation: "Quiz não iniciado.", finished: true }
@@ -66,6 +77,20 @@ export function answerQuiz(
   currentQuestionIndex++
 
   if (currentQuestionIndex >= sessionQuestions.length) {
+    const nextQ = await generateQuizQuestion()
+    if (nextQ && !nextQ.question.includes("error")) {
+      sessionQuestions.push(nextQ)
+      return {
+        correct: isCorrect,
+        explanation: currentQuestion.explanation,
+        finished: false,
+        nextQuestion: {
+          question: nextQ.question,
+          options: nextQ.options,
+        },
+      }
+    }
+
     sessionQuestions = []
     currentQuestionIndex = -1
     return {

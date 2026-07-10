@@ -1,30 +1,24 @@
 import type { IntentResult, IntentType } from "../types"
 
-const PLAYER_KEYWORDS = [
-  "jogador", "jogadora", "lenda", "craque", "artilheiro", "goleador",
-  "meio-campo", "atacante", "zagueiro", "goleiro", "lateral", "ponta",
-  "fenômeno", "rei", "melhor do mundo", "bola de ouro",
-]
+const CLASSIFICATION_PROMPT = `Classifique a mensagem do usuário em uma das categorias abaixo. Retorne APENAS um JSON no formato:
+{"type": "<categoria>", "entities": {"playerName": "<nome se mencionado>", "teamName": "<nome se mencionado>", "countryName": "<nome se mencionado>", "year": <ano se mencionado>}}
 
-const TEAM_KEYWORDS = [
-  "seleção", "selecao", "time", "equipe", "elenco", "escalação", "escalacao",
-  "tecnic", "técnic", "convocação", "convocacao",
-]
+Categorias:
+- "player": Pergunta sobre um jogador de futebol (nome, carreira, feitos)
+- "team": Pergunta sobre uma seleção/time nacional
+- "country": Pergunta sobre um país (capital, população, cultura)
+- "trivia": Pedido de curiosidade, fato surpreendente
+- "quiz": Pedido de quiz, pergunta, desafio
+- "general": Qualquer outra coisa (saudação, agradecimento, etc)
 
-const COUNTRY_KEYWORDS = [
-  "país", "pais", "capital", "população", "populacao", "idioma", "cultura",
-  "bandeira", "curiosidade do país", "curiosidade do pais",
-]
-
-const TRIVIA_KEYWORDS = [
-  "curiosidade", "fato", "sabia", "sabia que", "incrível", "surpreendente",
-  "aleatório", "aleatorio", "historinha",
-]
-
-const QUIZ_KEYWORDS = [
-  "quiz", "pergunta", "teste", "desafio", "responda", "questão", "questao",
-  "vamos brincar", "brincadeira", "adivinha",
-]
+Regras:
+- Se o usuário menciona um nome próprio associado a futebol → "player"
+- Se o usuário menciona "seleção", "time", ou nome de país como time → "team"
+- Se o usuário pergunta sobre país como entidade geopolítica → "country"
+- Se o usuário pede curiosidade ou fato → "trivia"
+- Se o usuário quer jogar quiz ou responder pergunta → "quiz"
+- Seja preciso: "Brasil" pode ser team ou country dependendo do contexto
+- Retorne APENAS o JSON, sem texto adicional`
 
 function extractEntities(
   text: string,
@@ -53,8 +47,34 @@ function calculateKeywordScore(text: string, keywords: string[]): number {
   return score
 }
 
-export function classifyIntent(text: string): IntentResult {
+function classifyByKeywords(text: string): IntentResult {
   const lower = text.toLowerCase()
+
+  const PLAYER_KEYWORDS = [
+    "jogador", "jogadora", "lenda", "craque", "artilheiro", "goleador",
+    "meio-campo", "atacante", "zagueiro", "goleiro", "lateral", "ponta",
+    "fenômeno", "rei", "melhor do mundo", "bola de ouro",
+  ]
+
+  const TEAM_KEYWORDS = [
+    "seleção", "selecao", "time", "equipe", "elenco", "escalação", "escalacao",
+    "tecnic", "técnic", "convocação", "convocacao",
+  ]
+
+  const COUNTRY_KEYWORDS = [
+    "país", "pais", "capital", "população", "populacao", "idioma", "cultura",
+    "bandeira", "curiosidade do país", "curiosidade do pais",
+  ]
+
+  const TRIVIA_KEYWORDS = [
+    "curiosidade", "fato", "sabia", "sabia que", "incrível", "surpreendente",
+    "aleatório", "aleatorio", "historinha",
+  ]
+
+  const QUIZ_KEYWORDS = [
+    "quiz", "pergunta", "teste", "desafio", "responda", "questão", "questao",
+    "vamos brincar", "brincadeira", "adivinha",
+  ]
 
   const scores: Record<IntentType, number> = {
     player: calculateKeywordScore(lower, PLAYER_KEYWORDS),
@@ -63,18 +83,6 @@ export function classifyIntent(text: string): IntentResult {
     trivia: calculateKeywordScore(lower, TRIVIA_KEYWORDS),
     quiz: calculateKeywordScore(lower, QUIZ_KEYWORDS),
     general: 0,
-  }
-
-  const namePatterns = [
-    ...lower.matchAll(/(?:lenda|craque|jogador|jogadora) ([\w\s]+?)(?: na copa| em \d{4}|$)/gi),
-    ...lower.matchAll(/(?:seleção|selecao|time d) ([\w\s]+?)(?: na copa| em \d{4}|$)/gi),
-  ]
-
-  const entities: IntentResult["entities"] = {}
-  if (namePatterns.length > 0) {
-    const name = namePatterns[0][1].trim()
-    if (scores.player > 0) entities.playerName = name
-    if (scores.team > 0) entities.teamName = name
   }
 
   let bestType: IntentType = "general"
@@ -87,11 +95,47 @@ export function classifyIntent(text: string): IntentResult {
     }
   }
 
-  const extractedEntities = extractEntities(lower, bestType)
+  const entities = extractEntities(lower, bestType)
 
   return {
     type: bestType,
     confidence: Math.min(bestScore / 3, 1),
-    entities: { ...entities, ...extractedEntities },
+    entities,
+  }
+}
+
+export async function classifyIntent(text: string): Promise<IntentResult> {
+  try {
+    const { generateText } = await import("ai")
+    const { groq } = await import("@ai-sdk/groq")
+
+    const { text: raw } = await generateText({
+      model: groq("llama-3.3-70b-versatile"),
+      prompt: `${CLASSIFICATION_PROMPT}\n\nMensagem: "${text}"`,
+      temperature: 0.1,
+      maxOutputTokens: 200,
+    })
+
+    const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
+    const parsed = JSON.parse(cleaned)
+
+    const intentType: IntentType = ["player", "team", "country", "trivia", "quiz", "general"]
+      .includes(parsed.type) ? parsed.type : "general"
+
+    const entities = extractEntities(text.toLowerCase(), intentType)
+
+    return {
+      type: intentType,
+      confidence: 0.95,
+      entities: {
+        playerName: parsed.entities?.playerName,
+        teamName: parsed.entities?.teamName,
+        countryName: parsed.entities?.countryName,
+        year: parsed.entities?.year,
+        ...entities,
+      },
+    }
+  } catch {
+    return classifyByKeywords(text)
   }
 }

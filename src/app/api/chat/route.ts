@@ -4,26 +4,35 @@ import { searchPlayer, getTeamByName, getRandomTrivia } from "@/lib/services/Wor
 import { getCountryByName, getCountryByCode, getRandomCountryFact } from "@/lib/services/CountryDataService"
 import { getPlayerImage, getTeamImage } from "@/lib/services/ImageService"
 import { generateChatResponse } from "@/lib/services/GroqLLMService"
-import { createUIMessageStreamResponse, toUIMessageStream } from "ai"
+import { createUIMessageStreamResponse, toUIMessageStream, type UIMessage } from "ai"
 import type { ContextPayload } from "@/lib/types"
 
 export async function POST(req: NextRequest) {
   try {
-    const { message } = await req.json()
+    const { messages } = await req.json()
 
-    if (!message || typeof message !== "string") {
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return new Response(JSON.stringify({ error: "Mensagens inválidas" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    const lastMessage = messages[messages.length - 1]
+    const userMessage = lastMessage?.content
+    if (!userMessage || typeof userMessage !== "string") {
       return new Response(JSON.stringify({ error: "Mensagem inválida" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       })
     }
 
-    const intent = classifyIntent(message)
+    const intent = await classifyIntent(userMessage)
     const context: ContextPayload = { intent }
 
     switch (intent.type) {
       case "player": {
-        const playerName = intent.entities.playerName || message
+        const playerName = intent.entities.playerName || userMessage
         const player = await searchPlayer(playerName)
         if (player) {
           context.player = player
@@ -34,7 +43,7 @@ export async function POST(req: NextRequest) {
       }
 
       case "team": {
-        const teamName = intent.entities.teamName || message
+        const teamName = intent.entities.teamName || userMessage
         const team = await getTeamByName(teamName)
         if (team) {
           context.team = team
@@ -45,7 +54,7 @@ export async function POST(req: NextRequest) {
       }
 
       case "country": {
-        const country = await getCountryByName(message)
+        const country = await getCountryByName(userMessage)
         if (country) {
           context.country = country
           const fact = await getRandomCountryFact()
@@ -62,7 +71,7 @@ export async function POST(req: NextRequest) {
       }
 
       case "trivia": {
-        const countryName = intent.entities.countryName || message.match(/envolvendo o?\s*([\w\s]+)/i)?.[1]
+        const countryName = intent.entities.countryName || userMessage.match(/envolvendo o?\s*([\w\s]+)/i)?.[1]
         if (countryName) {
           context.country = (await getCountryByName(countryName)) ?? undefined
         }
@@ -84,16 +93,16 @@ export async function POST(req: NextRequest) {
         const { startQuiz, answerQuiz, isQuizActive } = await import("@/lib/services/QuizService")
 
         if (isQuizActive()) {
-          const answerMatch = message.match(/^(\d)$/)
+          const answerMatch = userMessage.match(/^(\d)$/)
           if (answerMatch) {
-            const result = answerQuiz(answerMatch[1])
+            const result = await answerQuiz(answerMatch[1])
             context.quizResult = result
           } else {
-            const quizData = startQuiz()
+            const quizData = await startQuiz()
             context.quizData = quizData
           }
         } else {
-          const quizData = startQuiz()
+          const quizData = await startQuiz()
           context.quizData = quizData
         }
         break
@@ -103,7 +112,14 @@ export async function POST(req: NextRequest) {
         break
     }
 
-    const result = generateChatResponse(context, message)
+    const history = messages.slice(0, -1).map((m: UIMessage) => ({
+      role: m.role as "user" | "assistant",
+      content: m.parts
+        ? m.parts.filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text").map(p => p.text).join("")
+        : (m as any).content || "",
+    })).filter((m: { role: string; content: string }) => m.content.length > 0)
+
+    const result = generateChatResponse(context, userMessage, history)
 
     return createUIMessageStreamResponse({
       stream: toUIMessageStream({ stream: result.stream }),

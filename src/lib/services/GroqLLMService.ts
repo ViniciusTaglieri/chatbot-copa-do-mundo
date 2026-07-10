@@ -29,9 +29,17 @@ Formato de resposta:
 - Se houver dados de quiz no contexto, formate a resposta como pergunta com opções numeradas.
 - Se houver resultado de quiz, explique se acertou ou errou e dê a explicação.`
 
+const MAX_HISTORY_MESSAGES = 20
+
+interface HistoryMessage {
+  role: "user" | "assistant"
+  content: string
+}
+
 export function generateChatResponse(
   context: ContextPayload,
-  userMessage: string
+  userMessage: string,
+  history: HistoryMessage[] = []
 ) {
   const contextJson = JSON.stringify(
     {
@@ -48,12 +56,22 @@ export function generateChatResponse(
     2
   )
 
-  const userPrompt = `Dados estruturados para usar como base:\n${contextJson}\n\nPergunta do usuário:\n"${userMessage}"`
+  const systemMessage = `${SYSTEM_PROMPT}\n\nDados estruturados para usar como base:\n${contextJson}`
+
+  const limitedHistory = history.slice(-MAX_HISTORY_MESSAGES)
+
+  const messages = [
+    { role: "system" as const, content: systemMessage },
+    ...limitedHistory.map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    })),
+    { role: "user" as const, content: userMessage },
+  ]
 
   return streamText({
     model: groq("llama-3.3-70b-versatile"),
-    system: SYSTEM_PROMPT,
-    prompt: userPrompt,
+    messages,
     temperature: 0.8,
     maxOutputTokens: 1024,
   })
