@@ -8,8 +8,8 @@ async function searchWikimedia(query: string): Promise<string | null> {
     const data = await res.json()
     const pages = data.query?.pages
     if (!pages) return null
-    const page = Object.values(pages as Record<string, any>).find(
-      (p: any) => p.thumbnail?.source
+    const page = Object.values(pages as Record<string, { thumbnail?: { source?: string } }>).find(
+      (p) => p.thumbnail?.source
     )
     return page?.thumbnail?.source || null
   } catch {

@@ -52,7 +52,7 @@ export async function getCountryByCode(code: string): Promise<Country | null> {
 export async function getRandomCountryFact(): Promise<string | null> {
   try {
     const res = await fetch(
-      "https://world-fun-facts-multilanguage.p.rapidapi.com/fact.php?lang=pt",
+      `https://${process.env.RAPIDAPI_HOST}/fact.php?lang=pt`,
       {
         headers: {
           "X-RapidAPI-Key": process.env.RAPIDAPI_KEY!,

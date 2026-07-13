@@ -1,4 +1,4 @@
-const cache = new Map<string, { data: any; expiresAt: number }>()
+const cache = new Map<string, { data: unknown; expiresAt: number }>()
 
 const DEFAULT_TTL_MS = 30 * 60 * 1000 // 30 minutes
 

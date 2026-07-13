@@ -4,7 +4,10 @@ import { getFromCache, setToCache } from "../cache"
 const BASE_URL = process.env.ZAFRONIX_API_BASE_URL!
 const API_KEY = process.env.ZAFRONIX_API_KEY!
 
-async function fetchFromZafronix(endpoint: string): Promise<any> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ZafronixRecord = Record<string, any>
+
+async function fetchFromZafronix(endpoint: string): Promise<ZafronixRecord[]> {
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     headers: {
       "X-Api-Key": API_KEY,
@@ -75,10 +78,11 @@ export async function getTeamByName(name: string): Promise<NationalTeam | null> 
 export async function getRandomTrivia(): Promise<{ title: string; description: string } | null> {
   try {
     const data = await fetchFromZafronix("/trivia/random")
-    if (!data) return null
+    if (!data || data.length === 0) return null
+    const d = data[0]
     return {
-      title: data.title || "Curiosidade",
-      description: data.description || data.fact || data.text,
+      title: d.title || "Curiosidade",
+      description: d.description || d.fact || d.text,
     }
   } catch {
     return null

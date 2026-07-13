@@ -25,7 +25,7 @@ function extractTextFromMessage(message: { content?: unknown; parts?: unknown[] 
   if (!Array.isArray(message.parts)) return "";
 
   return message.parts
-    .filter((p): p is { type: "text"; text: string } => (p as any)?.type === "text" && typeof (p as any)?.text === "string")
+    .filter((p): p is { type: "text"; text: string } => (p as { type?: unknown; text?: unknown })?.type === "text" && typeof (p as { type?: unknown; text?: unknown })?.text === "string")
     .map((p) => (p as { text: string }).text)
     .join("")
     .trim();
