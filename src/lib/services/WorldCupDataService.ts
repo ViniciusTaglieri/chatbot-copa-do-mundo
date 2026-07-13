@@ -1,20 +1,24 @@
 import type { Player, NationalTeam } from "../types"
 import { getFromCache, setToCache } from "../cache"
 
-const BASE_URL = process.env.ZAFRONIX_API_BASE_URL
-const API_KEY = process.env.ZAFRONIX_API_KEY
-
-if (!BASE_URL || !API_KEY) {
-  console.warn("[WorldCupDataService] ZAFRONIX_API_BASE_URL or ZAFRONIX_API_KEY not set. Data fetching will fail.")
+function getRequiredEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) {
+    throw new Error(`[WorldCupDataService] Missing required environment variable: ${name}`)
+  }
+  return value
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ZafronixRecord = Record<string, any>
 
 async function fetchFromZafronix(endpoint: string): Promise<ZafronixRecord[]> {
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
+  const baseUrl = getRequiredEnv("ZAFRONIX_API_BASE_URL")
+  const apiKey = getRequiredEnv("ZAFRONIX_API_KEY")
+
+  const res = await fetch(`${baseUrl}${endpoint}`, {
     headers: {
-      "X-Api-Key": API_KEY,
+      "X-Api-Key": apiKey,
       "Content-Type": "application/json",
     },
   })
