@@ -47,16 +47,30 @@ async function resolvePlayerContext(
 ): Promise<ContextPayload> {
   const playerName = intent.entities.playerName || userMessage;
   const player = await searchPlayer(playerName);
+
   if (player) {
     context.player = player;
-    const playerImages = await searchImages(
-      `${player.name} ${player.nationalTeamName} football`,
-      3,
-    );
-    context.images = playerImages.map((img) => img.url);
+  } else {
+    context.player = {
+      id: "unknown",
+      name: playerName,
+      countryCode: "",
+      nationalTeamName: "",
+      position: "",
+    };
+  }
+
+  const searchQuery = player
+    ? `${player.name} ${player.nationalTeamName} football`
+    : `${playerName} football player`;
+  const playerImages = await searchImages(searchQuery, 3);
+  context.images = playerImages.map((img) => img.url);
+
+  if (player) {
     context.country =
       (await getCountryByName(player.nationalTeamName)) ?? undefined;
   }
+
   return context;
 }
 
@@ -67,16 +81,28 @@ async function resolveTeamContext(
 ): Promise<ContextPayload> {
   const teamName = intent.entities.teamName || userMessage;
   const team = await getTeamByName(teamName);
+
   if (team) {
     context.team = team;
-    const teamImages = await searchImages(
-      `${team.name} national football team`,
-      3,
-    );
-    context.images = teamImages.map((img) => img.url);
+  } else {
+    context.team = {
+      id: "unknown",
+      name: teamName,
+      countryCode: "",
+    };
+  }
+
+  const searchQuery = team
+    ? `${team.name} national football team`
+    : `${teamName} national football team`;
+  const teamImages = await searchImages(searchQuery, 3);
+  context.images = teamImages.map((img) => img.url);
+
+  if (team) {
     context.country =
       (await getCountryByCode(team.countryCode)) ?? undefined;
   }
+
   return context;
 }
 
@@ -87,16 +113,33 @@ async function resolveCountryContext(
   const country = await getCountryByName(userMessage);
   if (country) {
     context.country = country;
-    const fact = await getRandomCountryFact();
-    if (fact) {
-      context.trivia = {
-        id: "country-fact",
-        type: "country",
-        title: `Curiosidade sobre ${country.name}`,
-        description: fact,
-      };
-    }
   }
+
+  const searchQuery = country
+    ? `${country.name} country flag football`
+    : `${userMessage} country flag football`;
+  const countryImages = await searchImages(searchQuery, 3);
+  context.images = countryImages.map((img) => img.url);
+
+  const countryName = country?.name || userMessage;
+
+  if (!country) {
+    context.country = {
+      code: "",
+      name: userMessage,
+    };
+  }
+
+  const fact = await getRandomCountryFact();
+  if (fact) {
+    context.trivia = {
+      id: "country-fact",
+      type: "country",
+      title: `Curiosidade sobre ${countryName}`,
+      description: fact,
+    };
+  }
+
   return context;
 }
 
