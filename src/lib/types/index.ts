@@ -4,7 +4,7 @@ export interface Player {
   countryCode: string
   nationalTeamName: string
   position: string
-  cupsPlayed: number[]
+  cupsPlayed?: number[]
   totalGoalsInWorldCups?: number
   totalMatchesInWorldCups?: number
 }
@@ -13,7 +13,7 @@ export interface NationalTeam {
   id: string
   name: string
   countryCode: string
-  cupsParticipated: number[]
+  cupsParticipated?: number[]
   bestResult?: string
 }
 
