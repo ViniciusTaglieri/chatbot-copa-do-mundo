@@ -111,7 +111,8 @@ export async function classifyIntent(text: string): Promise<IntentResult> {
 
     const { text: raw } = await generateText({
       model: groq("llama-3.3-70b-versatile"),
-      prompt: `${CLASSIFICATION_PROMPT}\n\nMensagem: "${text}"`,
+      instructions: CLASSIFICATION_PROMPT,
+      prompt: `Mensagem: "${text}"`,
       temperature: 0.1,
       maxOutputTokens: 200,
     })

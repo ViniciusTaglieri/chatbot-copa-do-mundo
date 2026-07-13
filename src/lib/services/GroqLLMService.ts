@@ -61,7 +61,6 @@ export function generateChatResponse(
   const limitedHistory = history.slice(-MAX_HISTORY_MESSAGES)
 
   const messages = [
-    { role: "system" as const, content: systemMessage },
     ...limitedHistory.map((m) => ({
       role: m.role as "user" | "assistant",
       content: m.content,
@@ -71,6 +70,7 @@ export function generateChatResponse(
 
   return streamText({
     model: groq("llama-3.3-70b-versatile"),
+    instructions: systemMessage,
     messages,
     temperature: 0.8,
     maxOutputTokens: 1024,
