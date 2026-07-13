@@ -9,10 +9,12 @@ export async function getCountryByName(name: string): Promise<Country | null> {
     )
     if (!res.ok) return null
 
-    const data = await res.json()
-    if (!data || data.length === 0) return null
+    const data: unknown = await res.json()
+    if (!Array.isArray(data) || data.length === 0) return null
 
     const c = data[0]
+    if (!c || typeof c !== "object") return null
+
     return {
       code: c.cca2?.toLowerCase() || "",
       name: c.name?.common || name,
