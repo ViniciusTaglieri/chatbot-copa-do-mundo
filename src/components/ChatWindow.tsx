@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@ai-sdk/react";
 import { Loader2, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { CountryCardData, PlayerCardData, TeamCardData, TriviaItem } from "@/lib/types";
+import type { CountryCardData, MyUIMessage, PlayerCardData, TeamCardData, TriviaItem } from "@/lib/types";
 
 const WELCOME_MESSAGE =
   "Olá! Eu sou o **Bot da Copa** 🏆\n\nPergunte sobre jogadores, seleções, países ou peça uma curiosidade! Exemplos:\n- Me conta da lenda Ronaldo Fenômeno\n- Fala da Croácia na Copa\n- Me dá uma curiosidade sobre o Brasil";
@@ -20,7 +20,7 @@ export function ChatWindow() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
 
-  const { messages, sendMessage, status, error } = useChat();
+  const { messages, sendMessage, status, error } = useChat<MyUIMessage>();
 
   const isLoading = status === "streaming" || status === "submitted";
 
