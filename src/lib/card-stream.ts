@@ -27,7 +27,7 @@ export function buildCardDataParts(context: ContextPayload): CardDataPartEntry[]
   if (context.country) {
     parts.push({
       type: "data-countryCard",
-      data: { country: context.country },
+      data: { country: context.country, images: context.images ?? [] },
     })
   }
 

@@ -72,6 +72,7 @@ export interface TeamCardData {
 
 export interface CountryCardData {
   country: Country
+  images: string[]
 }
 
 export interface ChatResponse {
@@ -111,3 +112,13 @@ export type ChatCardDataParts = {
   countryCard: CountryCardData
   triviaCard: TriviaItem
 }
+
+export type MyUIMessage = import("ai").UIMessage<
+  never,
+  {
+    playerCard: PlayerCardData
+    teamCard: TeamCardData
+    countryCard: CountryCardData
+    triviaCard: TriviaItem
+  }
+>
