@@ -17,6 +17,12 @@ export interface NationalTeam {
   bestResult?: string
 }
 
+export interface ImageResult {
+  url: string
+  thumbnail?: string
+  source: 'serpapi' | 'wikimedia'
+}
+
 export interface Country {
   code: string
   name: string
@@ -56,12 +62,12 @@ export interface IntentResult {
 
 export interface PlayerCardData {
   player: Player
-  imageUrl?: string
+  images: string[]
 }
 
 export interface TeamCardData {
   team: NationalTeam
-  imageUrl?: string
+  images: string[]
 }
 
 export interface CountryCardData {
@@ -94,7 +100,14 @@ export interface ContextPayload {
   team?: NationalTeam
   country?: Country
   trivia?: TriviaItem
-  imageUrl?: string
+  images?: string[]
   quizData?: QuizData
   quizResult?: QuizResult
+}
+
+export type ChatCardDataParts = {
+  playerCard: PlayerCardData
+  teamCard: TeamCardData
+  countryCard: CountryCardData
+  triviaCard: TriviaItem
 }

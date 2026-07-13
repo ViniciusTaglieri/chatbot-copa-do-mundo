@@ -8,10 +8,10 @@ import { TriviaCard } from "@/components/TriviaCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { extractCardsFromResponse } from "@/lib/stream-parser";
 import { useChat } from "@ai-sdk/react";
 import { Loader2, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import type { CountryCardData, PlayerCardData, TeamCardData, TriviaItem } from "@/lib/types";
 
 const WELCOME_MESSAGE =
   "Olá! Eu sou o **Bot da Copa** 🏆\n\nPergunte sobre jogadores, seleções, países ou peça uma curiosidade! Exemplos:\n- Me conta da lenda Ronaldo Fenômeno\n- Fala da Croácia na Copa\n- Me dá uma curiosidade sobre o Brasil";
@@ -57,36 +57,49 @@ export function ChatWindow() {
               : [];
 
             const fullText =
-              textParts.length > 0 ? textParts.map((p) => p.text).join("") : "";
-
-            const { text, cardData } = extractCardsFromResponse(fullText);
+              textParts.length > 0
+                ? textParts.map((p) => p.text).join("")
+                : "";
 
             return (
               <div key={msg.id}>
-                <MessageBubble
-                  role={msg.role as "user" | "assistant"}
-                  content={text}
-                />
-                {cardData?.playerCard && (
-                  <div className="mt-2 flex justify-start">
-                    <PlayerCard data={cardData.playerCard} />
-                  </div>
+                {fullText && (
+                  <MessageBubble
+                    role={msg.role as "user" | "assistant"}
+                    content={fullText}
+                  />
                 )}
-                {cardData?.teamCard && (
-                  <div className="mt-2 flex justify-start">
-                    <TeamCard data={cardData.teamCard} />
-                  </div>
-                )}
-                {cardData?.countryCard && (
-                  <div className="mt-2 flex justify-start">
-                    <CountryCard data={cardData.countryCard} />
-                  </div>
-                )}
-                {cardData?.triviaCard && (
-                  <div className="mt-2 flex justify-start">
-                    <TriviaCard data={cardData.triviaCard} />
-                  </div>
-                )}
+
+                {msg.parts?.map((part, i) => {
+                  switch (part.type) {
+                    case "data-playerCard":
+                      return (
+                        <div key={`${msg.id}-card-${i}`} className="mt-2 flex justify-start">
+                          <PlayerCard data={part.data as PlayerCardData} />
+                        </div>
+                      );
+                    case "data-teamCard":
+                      return (
+                        <div key={`${msg.id}-card-${i}`} className="mt-2 flex justify-start">
+                          <TeamCard data={part.data as TeamCardData} />
+                        </div>
+                      );
+                    case "data-countryCard":
+                      return (
+                        <div key={`${msg.id}-card-${i}`} className="mt-2 flex justify-start">
+                          <CountryCard data={part.data as CountryCardData} />
+                        </div>
+                      );
+                    case "data-triviaCard":
+                      return (
+                        <div key={`${msg.id}-card-${i}`} className="mt-2 flex justify-start">
+                          <TriviaCard data={part.data as TriviaItem} />
+                        </div>
+                      );
+                    default:
+                      return null;
+                  }
+                })}
               </div>
             );
           })}
@@ -100,7 +113,7 @@ export function ChatWindow() {
           {error && (
             <MessageBubble
               role="assistant"
-              content="Erro ao enviar mensagem."
+              content={`Ops! ${error.message || "Ocorreu um erro ao processar sua mensagem. Tente novamente."}`}
             />
           )}
         </div>

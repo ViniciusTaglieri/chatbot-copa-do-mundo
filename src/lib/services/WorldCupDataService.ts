@@ -1,8 +1,12 @@
 import type { Player, NationalTeam } from "../types"
 import { getFromCache, setToCache } from "../cache"
 
-const BASE_URL = process.env.ZAFRONIX_API_BASE_URL!
-const API_KEY = process.env.ZAFRONIX_API_KEY!
+const BASE_URL = process.env.ZAFRONIX_API_BASE_URL
+const API_KEY = process.env.ZAFRONIX_API_KEY
+
+if (!BASE_URL || !API_KEY) {
+  console.warn("[WorldCupDataService] ZAFRONIX_API_BASE_URL or ZAFRONIX_API_KEY not set. Data fetching will fail.")
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ZafronixRecord = Record<string, any>
@@ -45,7 +49,8 @@ export async function searchPlayer(name: string): Promise<Player | null> {
 
     setToCache(cacheKey, player)
     return player
-  } catch {
+  } catch (error) {
+    console.error("[WorldCupDataService] searchPlayer error:", error)
     return null
   }
 }
@@ -70,7 +75,8 @@ export async function getTeamByName(name: string): Promise<NationalTeam | null> 
 
     setToCache(cacheKey, team)
     return team
-  } catch {
+  } catch (error) {
+    console.error("[WorldCupDataService] getTeamByName error:", error)
     return null
   }
 }
@@ -84,7 +90,8 @@ export async function getRandomTrivia(): Promise<{ title: string; description: s
       title: d.title || "Curiosidade",
       description: d.description || d.fact || d.text,
     }
-  } catch {
+  } catch (error) {
+    console.error("[WorldCupDataService] getRandomTrivia error:", error)
     return null
   }
 }

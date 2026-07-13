@@ -13,21 +13,10 @@ Regras:
 - Foque em entretenimento: histórias, curiosidades e contexto histórico.
 - Quando houver dados de jogador, mencione posição, edições de Copa, gols e feitos.
 - Quando houver dados de seleção, conecte com curiosidades do país quando possível.
-
-Formato de resposta:
-- Responda com texto narrativo em português brasileiro.
-- Se houver dados de jogador no contexto, inclua ao final:
-  ---CARDS:{"playerCard":{"player":<jogador>,"imageUrl":"<url>"}}---
-- Se houver dados de seleção no contexto, inclua ao final:
-  ---CARDS:{"teamCard":{"team":<time>,"imageUrl":"<url>"}}---
-- Se houver dados de país no contexto, inclua ao final:
-  ---CARDS:{"countryCard":{"country":<país>}}---
-- Se houver curiosidade no contexto, inclua ao final:
-  ---CARDS:{"triviaCard":{"id":"trivia","type":"general","title":"<título>","description":"<texto>"}}---
-- Você pode combinar múltiplos cards: ---CARDS:{"playerCard":{...},"countryCard":{...}}---
-- Use os dados do contexto exatamente como fornecidos para preencher os cards.
 - Se houver dados de quiz no contexto, formate a resposta como pergunta com opções numeradas.
-- Se houver resultado de quiz, explique se acertou ou errou e dê a explicação.`
+- Se houver resultado de quiz, explique se acertou ou errou e dê a explicação.
+
+IMPORTANTE: Responda APENAS com o texto narrativo. NÃO inclua JSON, cards ou marcadores especiais.`
 
 const MAX_HISTORY_MESSAGES = 20
 
@@ -48,7 +37,7 @@ export function generateChatResponse(
       team: context.team,
       country: context.country,
       trivia: context.trivia,
-      imageUrl: context.imageUrl,
+      images: context.images,
       quizData: context.quizData,
       quizResult: context.quizResult,
     },

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { CountryCardData } from "@/lib/types"
+import Image from "next/image"
 
 interface Props {
   data: CountryCardData
@@ -12,10 +13,14 @@ export function CountryCard({ data }: Props) {
     <Card className="w-full max-w-sm">
       {country.flagUrl && (
         <div className="relative h-32 w-full overflow-hidden rounded-t-lg bg-muted">
-          <img
+          <Image
             src={country.flagUrl}
             alt={`Bandeira ${country.name}`}
+            width={400}
+            height={128}
+            unoptimized
             className="h-full w-full object-contain p-4"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
           />
         </div>
       )}

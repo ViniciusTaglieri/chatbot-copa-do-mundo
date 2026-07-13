@@ -11,13 +11,26 @@ Regras:
 - O explanation deve ser educativo e curto
 - Retorne APENAS o JSON, sem texto adicional`
 
-let currentQuestionIndex = -1
-let sessionQuestions: Array<{
-  question: string
-  options: string[]
-  correctAnswer: number
-  explanation: string
-}> = []
+interface QuizSession {
+  currentQuestionIndex: number
+  questions: Array<{
+    question: string
+    options: string[]
+    correctAnswer: number
+    explanation: string
+  }>
+}
+
+const sessions = new Map<string, QuizSession>()
+
+function getOrCreateSession(sessionId: string): QuizSession {
+  let session = sessions.get(sessionId)
+  if (!session) {
+    session = { currentQuestionIndex: -1, questions: [] }
+    sessions.set(sessionId, session)
+  }
+  return session
+}
 
 async function generateQuizQuestion(): Promise<{
   question: string
@@ -40,7 +53,8 @@ async function generateQuizQuestion(): Promise<{
   }
 }
 
-export async function startQuiz(): Promise<{ question: string; options: string[] }> {
+export async function startQuiz(sessionId: string = "default"): Promise<{ question: string; options: string[] }> {
+  const session = getOrCreateSession(sessionId)
   const firstQuestion = await generateQuizQuestion()
   if (!firstQuestion) {
     return {
@@ -49,8 +63,8 @@ export async function startQuiz(): Promise<{ question: string; options: string[]
     }
   }
 
-  sessionQuestions = [firstQuestion]
-  currentQuestionIndex = 0
+  session.questions = [firstQuestion]
+  session.currentQuestionIndex = 0
 
   return {
     question: firstQuestion.question,
@@ -59,14 +73,16 @@ export async function startQuiz(): Promise<{ question: string; options: string[]
 }
 
 export async function answerQuiz(
-  userAnswer: string
+  userAnswer: string,
+  sessionId: string = "default"
 ): Promise<{
   correct: boolean
   explanation: string
   finished: boolean
   nextQuestion?: { question: string; options: string[] }
 }> {
-  const currentQuestion = sessionQuestions[currentQuestionIndex]
+  const session = getOrCreateSession(sessionId)
+  const currentQuestion = session.questions[session.currentQuestionIndex]
   if (!currentQuestion) {
     return { correct: false, explanation: "Quiz não iniciado.", finished: true }
   }
@@ -74,12 +90,12 @@ export async function answerQuiz(
   const answerIndex = parseInt(userAnswer)
   const isCorrect = answerIndex === currentQuestion.correctAnswer
 
-  currentQuestionIndex++
+  session.currentQuestionIndex++
 
-  if (currentQuestionIndex >= sessionQuestions.length) {
+  if (session.currentQuestionIndex >= session.questions.length) {
     const nextQ = await generateQuizQuestion()
-    if (nextQ && !nextQ.question.includes("error")) {
-      sessionQuestions.push(nextQ)
+    if (nextQ) {
+      session.questions.push(nextQ)
       return {
         correct: isCorrect,
         explanation: currentQuestion.explanation,
@@ -91,8 +107,8 @@ export async function answerQuiz(
       }
     }
 
-    sessionQuestions = []
-    currentQuestionIndex = -1
+    session.currentQuestionIndex = -1
+    session.questions = []
     return {
       correct: isCorrect,
       explanation: currentQuestion.explanation,
@@ -100,7 +116,7 @@ export async function answerQuiz(
     }
   }
 
-  const nextQ = sessionQuestions[currentQuestionIndex]
+  const nextQ = session.questions[session.currentQuestionIndex]
   return {
     correct: isCorrect,
     explanation: currentQuestion.explanation,
@@ -112,6 +128,8 @@ export async function answerQuiz(
   }
 }
 
-export function isQuizActive(): boolean {
-  return currentQuestionIndex >= 0 && currentQuestionIndex < sessionQuestions.length
+export function isQuizActive(sessionId: string = "default"): boolean {
+  const session = sessions.get(sessionId)
+  if (!session) return false
+  return session.currentQuestionIndex >= 0 && session.currentQuestionIndex < session.questions.length
 }

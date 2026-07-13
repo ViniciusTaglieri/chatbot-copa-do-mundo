@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ImageBentoGrid } from "@/components/ImageBentoGrid"
 import type { TeamCardData } from "@/lib/types"
 
 interface Props {
@@ -6,21 +7,15 @@ interface Props {
 }
 
 export function TeamCard({ data }: Props) {
-  const { team, imageUrl } = data
+  const { team, images } = data
 
   const cupsCount =
     Array.isArray(team.cupsParticipated) ? team.cupsParticipated.length : 0
 
   return (
     <Card className="w-full max-w-sm">
-      {imageUrl && (
-        <div className="relative h-40 w-full overflow-hidden rounded-t-lg">
-          <img
-            src={imageUrl}
-            alt={team.name}
-            className="h-full w-full object-cover"
-          />
-        </div>
+      {images.length > 0 && (
+        <ImageBentoGrid images={images} alt={team.name} />
       )}
       <CardHeader>
         <CardTitle className="text-lg">{team.name}</CardTitle>

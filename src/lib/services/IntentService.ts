@@ -1,5 +1,16 @@
 import type { IntentResult, IntentType } from "../types"
 
+const KNOWN_TEAMS = [
+  "brasil", "argentina", "alemanha", "frança", "espanha", "itália",
+  "inglaterra", "uruguai", "portugal", "holanda", "bélgica", "croácia",
+  "japão", "coreia", "méxico", "colômbia", "chile", "senegal",
+]
+
+const KNOWN_PLAYERS = [
+  "ronaldo", "neymar", "messi", "mbappé", "pele", "maradona",
+  "zidane", "beckham", "ronaldinho", "cafu", "roberto carlos",
+]
+
 const CLASSIFICATION_PROMPT = `Classifique a mensagem do usuário em uma das categorias abaixo. Retorne APENAS um JSON no formato:
 {"type": "<categoria>", "entities": {"playerName": "<nome se mencionado>", "teamName": "<nome se mencionado>", "countryName": "<nome se mencionado>", "year": <ano se mencionado>}}
 
@@ -25,11 +36,26 @@ function extractEntities(
   intentType: IntentType
 ): IntentResult["entities"] {
   const entities: IntentResult["entities"] = {}
+  const lower = text.toLowerCase()
 
-  if (intentType === "player" || intentType === "team" || intentType === "country") {
-    const copaMatch = text.match(/(\d{4})/)
-    if (copaMatch) {
-      entities.year = parseInt(copaMatch[1])
+  const yearMatch = text.match(/(\d{4})/)
+  if (yearMatch) entities.year = parseInt(yearMatch[1])
+
+  if (intentType === "player") {
+    for (const p of KNOWN_PLAYERS) {
+      if (lower.includes(p)) { entities.playerName = p; break }
+    }
+  }
+
+  if (intentType === "team") {
+    for (const t of KNOWN_TEAMS) {
+      if (lower.includes(t)) { entities.teamName = t; break }
+    }
+  }
+
+  if (intentType === "country") {
+    for (const t of KNOWN_TEAMS) {
+      if (lower.includes(t)) { entities.countryName = t; break }
     }
   }
 
@@ -136,7 +162,8 @@ export async function classifyIntent(text: string): Promise<IntentResult> {
         ...entities,
       },
     }
-  } catch {
+  } catch (error) {
+    console.error("[IntentService] classifyIntent error:", error)
     return classifyByKeywords(text)
   }
 }

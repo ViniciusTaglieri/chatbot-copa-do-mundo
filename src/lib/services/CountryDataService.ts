@@ -22,7 +22,8 @@ export async function getCountryByName(name: string): Promise<Country | null> {
       languages: c.languages ? Object.values(c.languages) as string[] : undefined,
       flagUrl: c.flags?.png || c.flags?.svg,
     }
-  } catch {
+  } catch (error) {
+    console.error("[CountryDataService] getCountryByName error:", error)
     return null
   }
 }
@@ -44,19 +45,27 @@ export async function getCountryByCode(code: string): Promise<Country | null> {
       languages: c.languages ? Object.values(c.languages) as string[] : undefined,
       flagUrl: c.flags?.png || c.flags?.svg,
     }
-  } catch {
+  } catch (error) {
+    console.error("[CountryDataService] getCountryByCode error:", error)
     return null
   }
 }
 
 export async function getRandomCountryFact(): Promise<string | null> {
+  const apiKey = process.env.RAPIDAPI_KEY
+  const host = process.env.RAPIDAPI_HOST
+  if (!apiKey || !host) {
+    console.warn("[CountryDataService] RAPIDAPI_KEY or RAPIDAPI_HOST not configured")
+    return null
+  }
+
   try {
     const res = await fetch(
-      `https://${process.env.RAPIDAPI_HOST}/fact.php?lang=pt`,
+      `https://${host}/fact.php?lang=pt`,
       {
         headers: {
-          "X-RapidAPI-Key": process.env.RAPIDAPI_KEY!,
-          "X-RapidAPI-Host": process.env.RAPIDAPI_HOST!,
+          "X-RapidAPI-Key": apiKey,
+          "X-RapidAPI-Host": host,
         },
       }
     )
@@ -64,7 +73,8 @@ export async function getRandomCountryFact(): Promise<string | null> {
 
     const data = await res.json()
     return data?.fact || data?.text || data?.description || null
-  } catch {
+  } catch (error) {
+    console.error("[CountryDataService] getRandomCountryFact error:", error)
     return null
   }
 }
