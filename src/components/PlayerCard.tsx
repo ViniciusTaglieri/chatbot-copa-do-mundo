@@ -8,6 +8,21 @@ interface Props {
 export function PlayerCard({ data }: Props) {
   const { player, imageUrl } = data
 
+  const cupsPlayedText =
+    Array.isArray(player.cupsPlayed) && player.cupsPlayed.length > 0
+      ? player.cupsPlayed.join(", ")
+      : "—"
+
+  const goalsText =
+    player.totalGoalsInWorldCups !== undefined
+      ? player.totalGoalsInWorldCups
+      : null
+
+  const matchesText =
+    player.totalMatchesInWorldCups !== undefined
+      ? player.totalMatchesInWorldCups
+      : null
+
   return (
     <Card className="w-full max-w-sm">
       {imageUrl && (
@@ -33,18 +48,18 @@ export function PlayerCard({ data }: Props) {
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Copas disputadas</span>
-          <span className="font-medium">{player.cupsPlayed.join(", ") || "—"}</span>
+          <span className="font-medium">{cupsPlayedText}</span>
         </div>
-        {player.totalGoalsInWorldCups !== undefined && (
+        {goalsText !== null && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Gols em Copas</span>
-            <span className="font-medium">{player.totalGoalsInWorldCups}</span>
+            <span className="font-medium">{goalsText}</span>
           </div>
         )}
-        {player.totalMatchesInWorldCups !== undefined && (
+        {matchesText !== null && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Jogos em Copas</span>
-            <span className="font-medium">{player.totalMatchesInWorldCups}</span>
+            <span className="font-medium">{matchesText}</span>
           </div>
         )}
       </CardContent>
