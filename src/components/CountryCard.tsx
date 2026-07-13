@@ -1,26 +1,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ImageBentoGrid } from "@/components/ImageBentoGrid"
 import type { CountryCardData } from "@/lib/types"
-import Image from "next/image"
 
 interface Props {
   data: CountryCardData
 }
 
 export function CountryCard({ data }: Props) {
-  const { country } = data
+  const { country, images } = data
 
   return (
     <Card className="w-full max-w-sm">
-      {country.flagUrl && (
+      {images.length > 0 && (
+        <ImageBentoGrid images={images} alt={country.name} />
+      )}
+      {!images.length && country.flagUrl && (
         <div className="relative h-32 w-full overflow-hidden rounded-t-lg bg-muted">
-          <Image
+          <img
             src={country.flagUrl}
             alt={`Bandeira ${country.name}`}
-            width={400}
-            height={128}
-            unoptimized
+            loading="lazy"
             className="h-full w-full object-contain p-4"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
           />
         </div>
       )}
