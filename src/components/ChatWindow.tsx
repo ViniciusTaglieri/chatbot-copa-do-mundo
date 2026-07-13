@@ -1,40 +1,43 @@
-"use client"
+"use client";
 
-import { useRef, useEffect, useState } from "react"
-import { useChat } from "@ai-sdk/react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { MessageBubble } from "@/components/MessageBubble"
-import { PlayerCard } from "@/components/PlayerCard"
-import { TeamCard } from "@/components/TeamCard"
-import { CountryCard } from "@/components/CountryCard"
-import { TriviaCard } from "@/components/TriviaCard"
-import { Send, Loader2 } from "lucide-react"
-import { extractCardsFromResponse } from "@/lib/stream-parser"
+import { CountryCard } from "@/components/CountryCard";
+import { MessageBubble } from "@/components/MessageBubble";
+import { PlayerCard } from "@/components/PlayerCard";
+import { TeamCard } from "@/components/TeamCard";
+import { TriviaCard } from "@/components/TriviaCard";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { extractCardsFromResponse } from "@/lib/stream-parser";
+import { useChat } from "@ai-sdk/react";
+import { Loader2, Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
-const WELCOME_MESSAGE = "Olá! Eu sou o **Bot da Copa** 🏆\n\nPergunte sobre jogadores, seleções, países ou peça uma curiosidade! Exemplos:\n- Me conta da lenda Ronaldo Fenômeno\n- Fala da Croácia na Copa\n- Me dá uma curiosidade sobre o Brasil"
+const WELCOME_MESSAGE =
+  "Olá! Eu sou o **Bot da Copa** 🏆\n\nPergunte sobre jogadores, seleções, países ou peça uma curiosidade! Exemplos:\n- Me conta da lenda Ronaldo Fenômeno\n- Fala da Croácia na Copa\n- Me dá uma curiosidade sobre o Brasil";
 
 export function ChatWindow() {
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [input, setInput] = useState("")
-  const { messages, sendMessage, status } = useChat({
-    transport: undefined,
-  })
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [input, setInput] = useState("");
 
-  const isLoading = status === "streaming" || status === "submitted"
+  const { messages, sendMessage, status, error } = useChat();
+
+  const isLoading = status === "streaming" || status === "submitted";
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages])
+  }, [messages]);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
-    sendMessage({ text: input })
-    setInput("")
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const text = input;
+    setInput("");
+
+    await sendMessage({ text });
   }
 
   return (
@@ -44,17 +47,26 @@ export function ChatWindow() {
           {messages.length === 0 && (
             <MessageBubble role="assistant" content={WELCOME_MESSAGE} />
           )}
+
           {messages.map((msg) => {
             const textParts = msg.parts
-              ? msg.parts.filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
-              : []
-            const fullText = textParts.length > 0
-              ? textParts.map((p) => p.text).join("")
-              : (msg as any).content || ""
-            const { text, cardData } = extractCardsFromResponse(fullText)
+              ? msg.parts.filter(
+                  (p): p is Extract<typeof p, { type: "text" }> =>
+                    p.type === "text",
+                )
+              : [];
+
+            const fullText =
+              textParts.length > 0 ? textParts.map((p) => p.text).join("") : "";
+
+            const { text, cardData } = extractCardsFromResponse(fullText);
+
             return (
               <div key={msg.id}>
-                <MessageBubble role={msg.role as "user" | "assistant"} content={text} />
+                <MessageBubble
+                  role={msg.role as "user" | "assistant"}
+                  content={text}
+                />
                 {cardData?.playerCard && (
                   <div className="mt-2 flex justify-start">
                     <PlayerCard data={cardData.playerCard} />
@@ -76,12 +88,20 @@ export function ChatWindow() {
                   </div>
                 )}
               </div>
-            )
+            );
           })}
+
           {isLoading && (
             <div className="flex justify-start">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
+          )}
+
+          {error && (
+            <MessageBubble
+              role="assistant"
+              content="Erro ao enviar mensagem."
+            />
           )}
         </div>
       </ScrollArea>
@@ -101,5 +121,5 @@ export function ChatWindow() {
         </form>
       </div>
     </div>
-  )
+  );
 }
