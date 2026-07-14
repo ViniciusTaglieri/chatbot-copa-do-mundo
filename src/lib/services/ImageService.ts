@@ -1,18 +1,19 @@
-import { getFromCache, setToCache } from "@/lib/cache"
-import type { ImageResult } from "../types"
+import { getFromCache, setToCache } from "@lib/cache"
+import { env } from "@lib/env"
+import type { ImageResult } from "@lib/types"
 
 const WIKIMEDIA_BASE = "https://en.wikipedia.org/w/api.php"
 const SERPAPI_BASE = "https://serpapi.com/search.json"
 const IMAGE_CACHE_TTL = 60 * 60 * 1000 // 1 hour
 
 async function searchSerpAPI(query: string, limit: number): Promise<ImageResult[]> {
-  const apiKey = process.env.SERPAPI_KEY
+  const apiKey = env.SERPAPI_KEY
   if (!apiKey) return []
 
   try {
     const url = `${SERPAPI_BASE}?engine=google_images&q=${encodeURIComponent(query)}&api_key=${apiKey}&safe=active&hl=pt-br`
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 5000)
+    const timeout = setTimeout(() => controller.abort(), 10000)
 
     const res = await fetch(url, { signal: controller.signal })
     clearTimeout(timeout)

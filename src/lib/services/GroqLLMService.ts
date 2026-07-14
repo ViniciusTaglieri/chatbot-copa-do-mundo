@@ -1,6 +1,6 @@
 import { groq } from "@ai-sdk/groq"
 import { streamText } from "ai"
-import type { ContextPayload } from "../types"
+import type { ContextPayload } from "@lib/types"
 
 const SYSTEM_PROMPT = `Você é o "Bot da Copa", um chatbot brasileiro apaixonado por Copa do Mundo.
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { getFromCache, setToCache, clearCache } from "@/lib/cache"
+import { getFromCache, setToCache, clearCache } from "@lib/cache"
 
 describe("cache", () => {
   beforeEach(() => {

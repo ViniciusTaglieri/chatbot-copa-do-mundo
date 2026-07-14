@@ -1,4 +1,5 @@
-import type { Country } from "../types"
+import { env } from "@lib/env"
+import type { Country } from "@lib/types"
 
 const REST_COUNTRIES_BASE = "https://restcountries.com/v3.1"
 
@@ -54,8 +55,8 @@ export async function getCountryByCode(code: string): Promise<Country | null> {
 }
 
 export async function getRandomCountryFact(): Promise<string | null> {
-  const apiKey = process.env.RAPIDAPI_KEY
-  const host = process.env.RAPIDAPI_HOST
+  const apiKey = env.RAPIDAPI_KEY
+  const host = env.RAPIDAPI_HOST
   if (!apiKey || !host) {
     console.warn("[CountryDataService] RAPIDAPI_KEY or RAPIDAPI_HOST not configured")
     return null

@@ -1,20 +1,29 @@
-import type { Player, NationalTeam } from "../types"
-import { getFromCache, setToCache } from "../cache"
-
-function getRequiredEnv(name: string): string {
-  const value = process.env[name]
-  if (!value) {
-    throw new Error(`[WorldCupDataService] Missing required environment variable: ${name}`)
-  }
-  return value
-}
+import { env } from "@lib/env"
+import type { Player, NationalTeam } from "@lib/types"
+import { getFromCache, setToCache } from "@lib/cache"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ZafronixRecord = Record<string, any>
 
 async function fetchFromZafronix(endpoint: string): Promise<ZafronixRecord[]> {
-  const baseUrl = getRequiredEnv("ZAFRONIX_API_BASE_URL")
-  const apiKey = getRequiredEnv("ZAFRONIX_API_KEY")
+  const { ZAFRONIX_API_BASE_URL: baseUrl, ZAFRONIX_API_KEY: apiKey } = env
+
+  const res = await fetch(`${baseUrl}${endpoint}`, {
+    headers: {
+      "X-Api-Key": apiKey,
+      "Content-Type": "application/json",
+    },
+  })
+
+  if (!res.ok) {
+    throw new Error(`Zafronix API error: ${res.status} ${res.statusText}`)
+  }
+
+  return res.json()
+}
+
+async function fetchFromZafronixRaw(endpoint: string): Promise<ZafronixRecord> {
+  const { ZAFRONIX_API_BASE_URL: baseUrl, ZAFRONIX_API_KEY: apiKey } = env
 
   const res = await fetch(`${baseUrl}${endpoint}`, {
     headers: {
@@ -36,8 +45,11 @@ export async function searchPlayer(name: string): Promise<Player | null> {
   if (cached) return cached
 
   try {
-    const data = await fetchFromZafronix(`/players/search?q=${encodeURIComponent(name)}`)
-    if (!data || data.length === 0) return null
+    const raw = await fetchFromZafronix(`/players?q=${encodeURIComponent(name)}&limit=5`)
+    const data: ZafronixRecord[] = Array.isArray(raw)
+      ? raw
+      : (raw as unknown as { results?: ZafronixRecord[] }).results ?? []
+    if (data.length === 0) return null
 
     const p = data[0]
     const player: Player = {
@@ -65,16 +77,30 @@ export async function getTeamByName(name: string): Promise<NationalTeam | null> 
   if (cached) return cached
 
   try {
-    const data = await fetchFromZafronix(`/teams/search?q=${encodeURIComponent(name)}`)
-    if (!data || data.length === 0) return null
+    const searchResult = await fetchFromZafronixRaw(`/search?q=${encodeURIComponent(name)}&types=team&limit=1`)
+    const results = searchResult.results as Array<{ href: string; label: string }> | undefined
+    if (!results || results.length === 0) return null
 
-    const t = data[0]
+    const teamHref = results[0].href
+    const teamData = await fetchFromZafronixRaw(teamHref)
+    if (!teamData) return null
+
+    const appearances = (teamData.appearances || []) as Array<Record<string, unknown>>
+    const bestPosition = appearances.length > 0
+      ? appearances.reduce((min, a) => {
+          const pos = Number(a.finalPosition)
+          return pos > 0 && pos < min ? pos : min
+        }, Infinity)
+      : undefined
+
     const team: NationalTeam = {
-      id: String(t.id),
-      name: t.name,
-      countryCode: t.country_code || t.countryCode,
-      cupsParticipated: t.world_cups || t.worldCups || [],
-      bestResult: t.best_result || t.bestResult,
+      id: String(teamData.name || name),
+      name: String(teamData.name || name),
+      countryCode: String((teamData.flag as Record<string, unknown>)?.fifaCode || ""),
+      cupsParticipated: appearances.map((a) => Number(a.year)).filter(Boolean),
+      bestResult: bestPosition && bestPosition !== Infinity
+        ? bestPosition === 1 ? "Campeão" : `${bestPosition}º lugar`
+        : undefined,
     }
 
     setToCache(cacheKey, team)
@@ -87,8 +113,11 @@ export async function getTeamByName(name: string): Promise<NationalTeam | null> 
 
 export async function getRandomTrivia(): Promise<{ title: string; description: string } | null> {
   try {
-    const data = await fetchFromZafronix("/trivia/random")
-    if (!data || data.length === 0) return null
+    const raw = await fetchFromZafronix("/trivia/random")
+    const data: ZafronixRecord[] = Array.isArray(raw)
+      ? raw
+      : (raw as unknown as { results?: ZafronixRecord[] }).results ?? []
+    if (data.length === 0) return null
     const d = data[0]
     return {
       title: d.title || "Curiosidade",

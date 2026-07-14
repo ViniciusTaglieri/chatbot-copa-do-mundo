@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ImageBentoGrid } from "@/components/ImageBentoGrid"
-import type { PlayerCardData } from "@/lib/types"
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
+import { ImageBentoGrid } from "@components/ImageBentoGrid"
+import type { PlayerCardData } from "@lib/types"
 
 interface Props {
   data: PlayerCardData

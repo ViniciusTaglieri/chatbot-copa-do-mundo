@@ -1,18 +1,18 @@
-import { buildCardDataParts } from "@/lib/card-stream";
+import { buildCardDataParts } from "@lib/card-stream";
 import {
   getCountryByCode,
   getCountryByName,
   getRandomCountryFact,
-} from "@/lib/services/CountryDataService";
-import { generateChatResponse } from "@/lib/services/GroqLLMService";
-import { searchImages } from "@/lib/services/ImageService";
-import { classifyIntent } from "@/lib/services/IntentService";
+} from "@lib/services/CountryDataService";
+import { generateChatResponse } from "@lib/services/GroqLLMService";
+import { searchImages } from "@lib/services/ImageService";
+import { classifyIntent } from "@lib/services/IntentService";
 import {
   getRandomTrivia,
   getTeamByName,
   searchPlayer,
-} from "@/lib/services/WorldCupDataService";
-import type { ContextPayload, IntentResult } from "@/lib/types";
+} from "@lib/services/WorldCupDataService";
+import type { ContextPayload, IntentResult } from "@lib/types";
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
@@ -177,7 +177,7 @@ async function resolveQuizContext(
   userMessage: string,
 ): Promise<ContextPayload> {
   const { startQuiz, answerQuiz, isQuizActive } =
-    await import("@/lib/services/QuizService");
+    await import("@lib/services/QuizService");
 
   const sessionId =
     req.headers.get("x-session-id") ||

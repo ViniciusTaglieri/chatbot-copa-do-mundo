@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Lightbulb } from "lucide-react"
-import type { TriviaItem } from "@/lib/types"
+import type { TriviaItem } from "@lib/types"
 
 interface Props {
   data: TriviaItem

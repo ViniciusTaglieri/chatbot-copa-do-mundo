@@ -1,4 +1,4 @@
-import type { IntentResult, IntentType } from "../types"
+import type { IntentResult, IntentType } from "@lib/types"
 
 const KNOWN_TEAMS = [
   "brasil", "argentina", "alemanha", "frança", "espanha", "itália",

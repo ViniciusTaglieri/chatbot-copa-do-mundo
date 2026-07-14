@@ -1,5 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 
+const { mockEnv } = vi.hoisted(() => ({
+  mockEnv: {
+    SERPAPI_KEY: undefined as string | undefined,
+    GROQ_API_KEY: undefined as string | undefined,
+  },
+}))
+
+vi.mock("@/lib/env", () => ({
+  get env() {
+    return mockEnv
+  },
+}))
+
 beforeEach(() => {
   vi.useFakeTimers()
 })
@@ -8,8 +21,8 @@ afterEach(() => {
   vi.useRealTimers()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
-  delete process.env.SERPAPI_KEY
-  delete process.env.GROQ_API_KEY
+  mockEnv.SERPAPI_KEY = undefined
+  mockEnv.GROQ_API_KEY = undefined
 })
 
 describe("Intent classification for Ronaldo Fenômeno", () => {
@@ -41,7 +54,6 @@ describe("Intent classification for Ronaldo Fenômeno", () => {
     const { classifyIntent } = await import("@/lib/services/IntentService")
     const result = await classifyIntent("Me conta da lenda Ronaldo Fenômeno")
 
-    // "lenda" = PLAYER_KEYWORDS, "fenômeno" = PLAYER_KEYWORDS → score = 2
     expect(result.type).toBe("player")
     expect(result.confidence).toBeGreaterThan(0)
   })
@@ -127,7 +139,7 @@ describe("ImageService API calls", () => {
   })
 
   it("should call SerpAPI with correct URL when key is set", async () => {
-    process.env.SERPAPI_KEY = "test-api-key"
+    mockEnv.SERPAPI_KEY = "test-api-key"
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ images_results: [] }),
@@ -144,6 +156,7 @@ describe("ImageService API calls", () => {
   })
 
   it("should call Wikimedia API", async () => {
+    mockEnv.SERPAPI_KEY = undefined
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ query: { pages: {} } }),
@@ -159,7 +172,7 @@ describe("ImageService API calls", () => {
   })
 
   it("should return images when APIs succeed", async () => {
-    process.env.SERPAPI_KEY = "test-key"
+    mockEnv.SERPAPI_KEY = "test-key"
     const serpResponse = {
       images_results: [
         { original: "https://example.com/img1.jpg", thumbnail: "https://example.com/thumb1.jpg" },

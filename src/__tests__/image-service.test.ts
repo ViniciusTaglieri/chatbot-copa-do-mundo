@@ -1,5 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { searchImages } from "@/lib/services/ImageService"
+import { searchImages } from "@lib/services/ImageService"
+
+const { mockEnv } = vi.hoisted(() => ({
+  mockEnv: {
+    SERPAPI_KEY: undefined as string | undefined,
+  },
+}))
+
+vi.mock("@lib/env", () => ({
+  get env() {
+    return mockEnv
+  },
+}))
 
 describe("searchImages", () => {
   beforeEach(() => {
@@ -10,11 +22,11 @@ describe("searchImages", () => {
     vi.useRealTimers()
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
-    delete process.env.SERPAPI_KEY
+    mockEnv.SERPAPI_KEY = undefined
   })
 
   it("should return images from SerpAPI when available", async () => {
-    process.env.SERPAPI_KEY = "test-key"
+    mockEnv.SERPAPI_KEY = "test-key"
     const mockSerpResponse = {
       images_results: [
         { original: "https://example.com/img1.jpg", thumbnail: "https://example.com/thumb1.jpg", title: "Ronaldo" },
@@ -37,7 +49,7 @@ describe("searchImages", () => {
   })
 
   it("should fallback to Wikimedia when SerpAPI fails", async () => {
-    process.env.SERPAPI_KEY = "test-key"
+    mockEnv.SERPAPI_KEY = "test-key"
     const mockWikimediaResponse = {
       query: {
         pages: {
@@ -97,8 +109,7 @@ describe("searchImages", () => {
   })
 
   it("should skip SerpAPI when SERPAPI_KEY is not set", async () => {
-    const original = process.env.SERPAPI_KEY
-    delete process.env.SERPAPI_KEY
+    mockEnv.SERPAPI_KEY = undefined
 
     const mockWikimediaResponse = {
       query: {
@@ -118,12 +129,10 @@ describe("searchImages", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(results[0].source).toBe("wikimedia")
-
-    process.env.SERPAPI_KEY = original
   })
 
   it("should limit results to specified limit", async () => {
-    process.env.SERPAPI_KEY = "test-key"
+    mockEnv.SERPAPI_KEY = "test-key"
     const mockSerpResponse = {
       images_results: [
         { original: "https://example.com/img1.jpg", thumbnail: "https://example.com/thumb1.jpg" },

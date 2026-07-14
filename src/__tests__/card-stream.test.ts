@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { buildCardDataParts } from "@/lib/card-stream"
-import type { ContextPayload } from "@/lib/types"
+import { buildCardDataParts } from "@lib/card-stream"
+import type { ContextPayload } from "@lib/types"
 
 describe("buildCardDataParts", () => {
   it("should return empty array for empty context", () => {

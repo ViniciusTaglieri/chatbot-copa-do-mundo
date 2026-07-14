@@ -1,5 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { clearCache } from "@/lib/cache"
+import { clearCache } from "@lib/cache"
+
+const { mockEnv } = vi.hoisted(() => ({
+  mockEnv: {
+    SERPAPI_KEY: undefined as string | undefined,
+  },
+}))
+
+vi.mock("@lib/env", () => ({
+  get env() {
+    return mockEnv
+  },
+}))
 
 beforeEach(() => {
   clearCache()
@@ -10,12 +22,12 @@ afterEach(() => {
   vi.useRealTimers()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
-  delete process.env.SERPAPI_KEY
+  mockEnv.SERPAPI_KEY = undefined
 })
 
 describe("Image API - SerpAPI", () => {
   it("should return image URLs from SerpAPI response", async () => {
-    process.env.SERPAPI_KEY = "test-key"
+    mockEnv.SERPAPI_KEY = "test-key"
     const mockResponse = {
       images_results: [
         { original: "https://example.com/ronaldo1.jpg", thumbnail: "https://example.com/ronaldo1_thumb.jpg", title: "Ronaldo Fenomeno" },
@@ -29,7 +41,7 @@ describe("Image API - SerpAPI", () => {
       json: () => Promise.resolve(mockResponse),
     }))
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     const results = await searchImages("Ronaldo Fenomeno", 3)
 
     expect(results).toHaveLength(3)
@@ -43,14 +55,14 @@ describe("Image API - SerpAPI", () => {
   })
 
   it("should call SerpAPI with correct query parameters", async () => {
-    process.env.SERPAPI_KEY = "my-api-key"
+    mockEnv.SERPAPI_KEY = "my-api-key"
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ images_results: [] }),
     })
     vi.stubGlobal("fetch", fetchMock)
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     await searchImages("Ronaldo Brasil football", 3)
 
     const calledUrl = fetchMock.mock.calls[0][0] as string
@@ -61,7 +73,7 @@ describe("Image API - SerpAPI", () => {
   })
 
   it("should skip SerpAPI when SERPAPI_KEY is missing but still call Wikimedia", async () => {
-    delete process.env.SERPAPI_KEY
+    mockEnv.SERPAPI_KEY = undefined
     const wikiResponse = {
       query: {
         pages: {
@@ -75,10 +87,9 @@ describe("Image API - SerpAPI", () => {
     })
     vi.stubGlobal("fetch", fetchMock)
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     const results = await searchImages("Ronaldo", 3)
 
-    // Only Wikimedia is called (1 call), not SerpAPI
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(results).toHaveLength(1)
     expect(results[0].source).toBe("wikimedia")
@@ -101,7 +112,7 @@ describe("Image API - Wikimedia", () => {
       json: () => Promise.resolve(mockResponse),
     }))
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     const results = await searchImages("Ronaldo Nazario", 3)
 
     expect(results).toHaveLength(2)
@@ -116,7 +127,7 @@ describe("Image API - Wikimedia", () => {
     })
     vi.stubGlobal("fetch", fetchMock)
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     await searchImages("Ronaldo Brasil football", 3)
 
     const calledUrl = fetchMock.mock.calls[0][0] as string
@@ -142,7 +153,7 @@ describe("Image API - Wikimedia", () => {
       json: () => Promise.resolve(mockResponse),
     }))
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     const results = await searchImages("Ronaldo", 5)
 
     expect(results).toHaveLength(2)
@@ -151,7 +162,7 @@ describe("Image API - Wikimedia", () => {
 
 describe("Image API - Fallback behavior", () => {
   it("should fallback to Wikimedia when SerpAPI fails", async () => {
-    process.env.SERPAPI_KEY = "test-key"
+    mockEnv.SERPAPI_KEY = "test-key"
     const wikiResponse = {
       query: {
         pages: {
@@ -165,7 +176,7 @@ describe("Image API - Fallback behavior", () => {
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(wikiResponse) })
     )
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     const results = await searchImages("Ronaldo fallback", 3)
 
     expect(results).toHaveLength(1)
@@ -173,7 +184,7 @@ describe("Image API - Fallback behavior", () => {
   })
 
   it("should prefer SerpAPI results over Wikimedia", async () => {
-    process.env.SERPAPI_KEY = "test-key"
+    mockEnv.SERPAPI_KEY = "test-key"
     const serpResponse = {
       images_results: [
         { original: "https://serpapi.com/img1.jpg", thumbnail: "https://serpapi.com/thumb1.jpg" },
@@ -192,7 +203,7 @@ describe("Image API - Fallback behavior", () => {
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(wikiResponse) })
     )
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     const results = await searchImages("Ronaldo prefer", 3)
 
     expect(results).toHaveLength(1)
@@ -203,7 +214,7 @@ describe("Image API - Fallback behavior", () => {
   it("should return empty when both APIs fail", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }))
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     const results = await searchImages("nonexistent", 3)
 
     expect(results).toEqual([])
@@ -224,17 +235,16 @@ describe("Image Caching", () => {
     })
     vi.stubGlobal("fetch", fetchMock)
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     const first = await searchImages("cached query", 3)
     const second = await searchImages("cached query", 3)
 
     expect(first).toEqual(second)
-    // Both SerpAPI and Wikimedia are called on first call
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it("should use separate cache keys for different queries", async () => {
-    process.env.SERPAPI_KEY = "test-key"
+    mockEnv.SERPAPI_KEY = "test-key"
     const mockResponse = {
       images_results: [
         { original: "https://example.com/img1.jpg" },
@@ -247,12 +257,10 @@ describe("Image Caching", () => {
     })
     vi.stubGlobal("fetch", fetchMock)
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     await searchImages("query1", 3)
     await searchImages("query2", 3)
 
-    // First query: 2 calls (SerpAPI + Wikimedia)
-    // Second query: 2 calls (SerpAPI + Wikimedia) since cache keys differ
     expect(fetchMock).toHaveBeenCalledTimes(4)
   })
 })
@@ -279,7 +287,7 @@ describe("Image URL formats from real APIs", () => {
       json: () => Promise.resolve(mockResponse),
     }))
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     const results = await searchImages("Ronaldo Nazario", 1)
 
     expect(results).toHaveLength(1)
@@ -288,7 +296,7 @@ describe("Image URL formats from real APIs", () => {
   })
 
   it("should handle SerpAPI with various image domains", async () => {
-    process.env.SERPAPI_KEY = "test-key"
+    mockEnv.SERPAPI_KEY = "test-key"
     const mockResponse = {
       images_results: [
         { original: "https://p16-sign-sg.tiktokcdn.com/img1.jpg", thumbnail: "https://p16-sign-sg.tiktokcdn.com/thumb1.jpg" },
@@ -302,7 +310,7 @@ describe("Image URL formats from real APIs", () => {
       json: () => Promise.resolve(mockResponse),
     }))
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     const results = await searchImages("Ronaldo Fenomeno", 3)
 
     expect(results).toHaveLength(3)
@@ -314,7 +322,7 @@ describe("Image URL formats from real APIs", () => {
 
 describe("Image limit behavior", () => {
   it("should respect the limit parameter", async () => {
-    process.env.SERPAPI_KEY = "test-key"
+    mockEnv.SERPAPI_KEY = "test-key"
     const mockResponse = {
       images_results: Array.from({ length: 10 }, (_, i) => ({
         original: `https://example.com/img${i}.jpg`,
@@ -327,14 +335,14 @@ describe("Image limit behavior", () => {
       json: () => Promise.resolve(mockResponse),
     }))
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     const results = await searchImages("Ronaldo", 2)
 
     expect(results).toHaveLength(2)
   })
 
   it("should return fewer results when API returns less than limit", async () => {
-    process.env.SERPAPI_KEY = "test-key"
+    mockEnv.SERPAPI_KEY = "test-key"
     const mockResponse = {
       images_results: [
         { original: "https://example.com/img1.jpg" },
@@ -346,7 +354,7 @@ describe("Image limit behavior", () => {
       json: () => Promise.resolve(mockResponse),
     }))
 
-    const { searchImages } = await import("@/lib/services/ImageService")
+    const { searchImages } = await import("@lib/services/ImageService")
     const results = await searchImages("Ronaldo", 5)
 
     expect(results).toHaveLength(1)
